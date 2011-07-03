@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, TwosconActivity!</string>
+    <string name="app_name">Twoscon</string>
+    <string name="twitter_failed">There was a problem talking to twitter</string>
+</resources>
