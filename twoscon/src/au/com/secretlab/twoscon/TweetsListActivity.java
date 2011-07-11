@@ -16,7 +16,6 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,7 +23,6 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,24 +32,23 @@ public class TweetsListActivity extends ListActivity {
 			.parse("http://search.twitter.com/search.json");
 
 	private String mSearchTerm = "#oscon";
-	private List<JSONObject> mTweetsList;
+	private List<Tweet> mTweetsList;
 	private TweetsAdapter mTweetsAdapter;
-	private String mSinceId;
+	private TwitterSearcher mTwitterSearcher;
 
 	private Button mRefreshTweets;
-	
+
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		mTweetsList = new ArrayList<JSONObject>();
+		mTweetsList = new ArrayList<Tweet>();
 		mTweetsAdapter = new TweetsAdapter(this, 0, mTweetsList);
-		mSinceId = "0"; // Want to start off by getting as many tweets as
-						// possible.
 
 		mSearchTerm = this.getIntent().getStringExtra("search_term");
-		
+		mTwitterSearcher = new TwitterSearcher(mSearchTerm);
+
 		this.setContentView(R.layout.twoscon);
 		setListAdapter(mTweetsAdapter);
 
@@ -67,18 +64,21 @@ public class TweetsListActivity extends ListActivity {
 
 	}
 
-	/** Adapter that displays twitter search result JSONObjects inside single_tweet layouts. 
+	/**
+	 * Adapter that displays twitter search result JSONObjects inside
+	 * single_tweet layouts.
 	 * 
 	 * @author chrisjrn
-	 *
+	 * 
 	 */
-	class TweetsAdapter extends ArrayAdapter<JSONObject> {
+	class TweetsAdapter extends ArrayAdapter<Tweet> {
 
-		/** Just picked the most relevant constructor from the help provided by eclipse!
-		 * 
+		/**
+		 * Just picked the most relevant constructor from the help provided by
+		 * eclipse!
 		 */
 		public TweetsAdapter(Context context, int textViewResourceId,
-				List<JSONObject> objects) {
+				List<Tweet> objects) {
 			super(context, textViewResourceId, objects);
 			// TODO Auto-generated constructor stub
 		}
@@ -87,14 +87,15 @@ public class TweetsListActivity extends ListActivity {
 			View tweetView;
 			LayoutInflater vi = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 			tweetView = vi.inflate(R.layout.single_tweet, parent, false);
-			
-			TextView fromUser = (TextView) tweetView.findViewById(R.id.tweet_from_user);
+
+			TextView fromUser = (TextView) tweetView
+					.findViewById(R.id.tweet_from_user);
 			TextView text = (TextView) tweetView.findViewById(R.id.tweet_text);
-			JSONObject tweet = this.getItem(position);
-						
-			fromUser.setText(tweet.optString("from_user"));
-			text.setText(tweet.optString("text"));
-						
+			Tweet tweet = this.getItem(position);
+
+			fromUser.setText(tweet.fromUser);
+			text.setText(tweet.text);
+
 			return tweetView;
 		}
 
@@ -106,68 +107,44 @@ public class TweetsListActivity extends ListActivity {
 	 * blocking task, e.g. net fetching is done on the UI thread, our app can
 	 * hang. We don't want that.
 	 * 
-	 * @author chrisjrn
+	 * @author Christopher Neugebauer <chris@secretlab.com.au>
 	 * 
 	 */
 	class TwitterFetcher extends AsyncTask<Void, Void, String> {
 
 		@Override
 		protected String doInBackground(Void... arg0) {
-			// Build up the URL -- See http://dev.twitter.com/doc/get/search
-			Uri.Builder b = TWITTER_SEARCH.buildUpon();
-			b.appendQueryParameter("q", mSearchTerm);
-			b.appendQueryParameter("since_id", mSinceId);
 
-			String twitterSearchUri = b.build().toString();
-
-			HttpClient httpClient = new DefaultHttpClient();
-			HttpGet request = new HttpGet(twitterSearchUri);
-
-			String jsonString = null;
-
+			List<Tweet> tweets = null;
 			try {
-				// BasicResponseHandler magically turns out response into a
-				// string body. Saves a lot of code, but isn't immediately
-				// obvious, sadly.
-				return httpClient.execute(request, new BasicResponseHandler());
-			} catch (Exception e) {
-				// This is bad Java practice, but we really don't have time
-				// to cover doing this properly.
-				Log.e("TwosconActivity", "Error: " + e);
-				return null;
+				tweets = mTwitterSearcher.getNewestTweets();
+			} catch (TwosconException e) {
+				// If searching for tweets causes problems, then return the
+				// error message, which will be displayed as an error.
+				return e.toString();
 			}
+
+			// Add our tweets to the underlying UI storage -- we don't update
+			// the UI yet.
+			mTweetsList.addAll(0, tweets);
+
+			return null;
 		}
 
 		@Override
-		protected void onPostExecute(String result) {
-			JSONArray js;
-			if (result != null) {
-				try {
-					js = new JSONObject(result).optJSONArray("results");
-				} catch (JSONException e) {
-					return;
-				}
-
-				// Create list to store tweets in: JSONArray doesn't work as a Java collection (hrrrngh)
-				ArrayList<JSONObject> newTweets = new ArrayList<JSONObject>();
-
-				// Fill up our cursor!
-				for (int i = 0; i < js.length(); i++) {
-					JSONObject tweet = js.optJSONObject(i);
-					if (i==0) mSinceId = tweet.optString("id");
-					newTweets.add(tweet);
-				}
-				
-				// Add to the underlying list -- can mass copy objects.
-				mTweetsList.addAll(0, newTweets);				
+		protected void onPostExecute(String error) {
+			if (error == null) {
+				// Update the UI
 				mTweetsAdapter.notifyDataSetChanged();
-
 			} else {
-
 				// Show that there's an error using a toast
-				Toast.makeText(TweetsListActivity.this, R.string.twitter_failed,
+				// This error is probably not very user-friendly. We can improve
+				// this later.
+				Toast.makeText(TweetsListActivity.this, error,
 						Toast.LENGTH_LONG).show();
 			}
+
+			// Set our button to be usable again!
 			mRefreshTweets.setEnabled(true);
 		}
 	}

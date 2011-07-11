@@ -5,15 +5,16 @@
     android:layout_height="fill_parent"
     >
 <TextView
+android:textAppearance="?android:attr/textAppearanceMedium"
 	android:id="@+id/tweet_from_user"
     android:layout_width="fill_parent" 
     android:layout_height="wrap_content" 
-    android:text="@string/hello"
+    android:text="\@chrisjrn"
     android:singleLine="true" android:textStyle="bold"/>
 <TextView
 	android:id="@+id/tweet_text"
     android:layout_width="fill_parent" 
     android:layout_height="wrap_content" 
-    android:text="@string/hello"
+    android:text="Totally running a workshop right now!"
     android:singleLine="false"/>
 </LinearLayout>

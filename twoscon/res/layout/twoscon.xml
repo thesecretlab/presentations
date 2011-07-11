@@ -7,7 +7,8 @@
 <ListView
 	android:id="@android:id/list"
     android:layout_width="fill_parent" 
-    android:layout_height="wrap_content" 
+    android:layout_height="fill_parent"
+    android:layout_weight="1" 
     />
 <TextView
 	android:id="@android:id/empty"
@@ -15,4 +16,15 @@
     android:layout_height="wrap_content" 
     android:text="[[ OMG NO TWEETS ]]"
     android:singleLine="false"/>
+    
+<Button
+	android:id="@+id/refresh_tweets"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent"
+	android:text="[[ Refresh Tweets ]]]"
+	android:visibility="visible"
+	android:layout_gravity="bottom"
+	android:layout_weight="5"
+/>
+
 </LinearLayout>
