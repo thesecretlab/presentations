@@ -1,11 +1,4 @@
-twoscon/bin/*
-twoscon/gen/*
-twoscona/bin/*
-twoscona/gen/*
-twosconb/bin/*
-twosconb/gen/*
-twosconc/bin/*
-twosconc/gen/*
-twoscond/bin/*
-twoscond/gen/*
+*/bin/*
+*/gen/*
 twoscon.jar
+*.class
